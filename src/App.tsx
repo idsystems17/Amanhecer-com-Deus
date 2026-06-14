@@ -355,6 +355,9 @@ export default function App() {
   const handleGoogleLogin = async () => {
     setIsLoggingIn(true);
     try {
+      if (auth.currentUser) {
+        await logoutUser();
+      }
       const user = await loginWithGoogle();
       if (user) {
         let adminCheck = isUserAdmin(user.email);
@@ -981,12 +984,12 @@ export default function App() {
 
           <div className="flex items-center gap-1.5">
             {/* Pastor Access Button */}
-            {!currentUser ? (
+            {!currentUser || !isAdmin ? (
               <button
                 onClick={handleGoogleLogin}
                 disabled={isLoggingIn}
                 className="w-10 h-10 sm:w-11 sm:h-11 flex items-center justify-center bg-white dark:bg-zinc-850 hover:bg-amber-50 rounded-xl border transition shrink-0"
-                title="Acesso de Pastor (Login)"
+                title={currentUser ? "Mudar conta de pastor (Login)" : "Acesso de Pastor (Login)"}
               >
                 {isLoggingIn ? (
                   <div className="w-4 h-4 border-2 border-amber-800 border-t-transparent rounded-full animate-spin" />
@@ -995,16 +998,14 @@ export default function App() {
                 )}
               </button>
             ) : (
-              isAdmin && (
-                <button
-                  onClick={handleStartEditing}
-                  disabled={isEditing}
-                  className={`w-10 h-10 sm:w-11 sm:h-11 flex items-center justify-center rounded-xl border transition shrink-0 ${isEditing ? 'bg-amber-600/20 text-amber-600 border-amber-500/50' : 'bg-amber-600 border-amber-600 text-white hover:bg-amber-700'}`}
-                  title="Editar esta Devocional"
-                >
-                  <Edit2 className="w-4 h-4" />
-                </button>
-              )
+              <button
+                onClick={handleStartEditing}
+                disabled={isEditing}
+                className={`w-10 h-10 sm:w-11 sm:h-11 flex items-center justify-center rounded-xl border transition shrink-0 ${isEditing ? 'bg-amber-600/20 text-amber-600 border-amber-500/50' : 'bg-amber-600 border-amber-600 text-white hover:bg-amber-700'}`}
+                title="Editar esta Devocional"
+              >
+                <Edit2 className="w-4 h-4" />
+              </button>
             )}
 
             <button
