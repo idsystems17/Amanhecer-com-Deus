@@ -1,0 +1,42 @@
+{
+  "entities": {
+    "Devotional": {
+      "title": "Devotional",
+      "description": "Daily devotional reflection for a specific day of the year",
+      "type": "object",
+      "properties": {
+        "day": { "type": "integer", "description": "Day of the year (1-365)" },
+        "title": { "type": "string", "description": "Title of the devotional reflection" },
+        "verseText": { "type": "string", "description": "Bible verse content text" },
+        "verseReference": { "type": "string", "description": "Bible verse reference (e.g. João 3:16)" },
+        "reflection": { "type": "string", "description": "The main study/pastoral reflection text" },
+        "action": { "type": "string", "description": "Daily practical instruction or challenge" },
+        "prayer": { "type": "string", "description": "A suggested prayer text" },
+        "category": { "type": "string", "description": "Theological or thematic category of the devotional" },
+        "lastEditedBy": { "type": "string", "description": "The UID of the administrator who last edited" },
+        "lastEditedAt": { "type": "string", "format": "date-time", "description": "Timestamp when this was saved" }
+      },
+      "required": ["day", "title", "verseText", "verseReference", "reflection", "action", "prayer"]
+    },
+    "Admin": {
+      "title": "Admin",
+      "description": "An administrator record, matching Pastor or Coordinator UIDs",
+      "type": "object",
+      "properties": {
+        "email": { "type": "string", "description": "Admin email for fallback checking" },
+        "role": { "type": "string", "description": "Access role, e.g. pastor" }
+      },
+      "required": ["email", "role"]
+    }
+  },
+  "firestore": {
+    "/devotionals/{dayId}": {
+      "schema": "Devotional",
+      "description": "Devotionals mapped by day of the year (1 to 365)"
+    },
+    "/admins/{adminUid}": {
+      "schema": "Admin",
+      "description": "Lists authorized users with editorial access"
+    }
+  }
+}

@@ -1,0 +1,82 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global Safety Net default catch-all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Pointers & Helpers
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // Role-based Access Control checking Firestore document OR verified bootstrap emails
+    function isAdmin() {
+      return isSignedIn() && (
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid)) ||
+        (request.auth.token.email_verified == true && request.auth.token.email in ['izisdiasduarte@gmail.com', 'idsystems17@gmail.com'])
+      );
+    }
+
+    function isValidDayId(dayId) {
+      return dayId.size() >= 1 && dayId.size() <= 3 && dayId.matches('^[0-9]+$');
+    }
+
+    // Schema Validation Helper
+    function isValidDevotional(data) {
+      return data.keys().hasAll(['day', 'title', 'verseText', 'verseReference', 'reflection', 'action', 'prayer', 'category'])
+        && data.keys().size() <= 10
+        && data.day is int
+        && data.day >= 1
+        && data.day <= 365
+        && data.title is string
+        && data.title.size() <= 200
+        && data.verseText is string
+        && data.verseText.size() <= 1000
+        && data.verseReference is string
+        && data.verseReference.size() <= 200
+        && data.reflection is string
+        && data.reflection.size() <= 5000
+        && data.action is string
+        && data.action.size() <= 1000
+        && data.prayer is string
+        && data.prayer.size() <= 1000
+        && data.category is string
+        && data.category.size() <= 1005;
+    }
+
+    // Devotionals Collection Matching Rules
+    match /devotionals/{dayId} {
+      // Public reading allows unrestricted viewing for church members
+      allow get, list: if true;
+
+      // Administrative editing
+      allow create: if isAdmin() 
+        && isValidDayId(dayId) 
+        && isValidDevotional(incoming());
+
+      allow update: if isAdmin()
+        && isValidDevotional(incoming())
+        && incoming().day == existing().day
+        && incoming().diff(existing()).affectedKeys().hasOnly(['title', 'verseText', 'verseReference', 'reflection', 'action', 'prayer', 'category', 'lastEditedBy', 'lastEditedAt']);
+
+      allow delete: if isAdmin();
+    }
+
+    // Admins Registry
+    match /admins/{adminUid} {
+      allow read: if isSignedIn() && (request.auth.uid == adminUid || isAdmin());
+      allow write: if isAdmin();
+    }
+  }
+}

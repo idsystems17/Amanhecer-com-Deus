@@ -1,0 +1,6 @@
+{
+  "name": "Amanhecer com Deus",
+  "description": "O aplicativo de devocionais diários da Segunda Igreja Batista no Jardim Tropical (SIB Jardim Tropical), acessível para idosos com áudio narração, busca inteligente por comandos de voz, acompanhamento de leitura anual e lembretes personalizáveis.",
+  "requestFramePermissions": ["microphone"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
