@@ -894,7 +894,7 @@ const [showInstallHelp, setShowInstallHelp] = useState(false);
               <ChevronLeft className="w-3.5 h-3.5 text-amber-700" />
               <span>Anterior</span>
             </button>
-            <span className="text-[11px] sm:text-xs font-bold px-1 sm:px-2 font-serif text-stone-600 dark:text-stone-300 min-w-[44px] text-center">Dia {selectedDay}</span>
+            <span className="text-[11px] sm:text-xs font-bold px-1 sm:px-2 font-serif text-stone-600 dark:text-stone-300 min-w-[52px] text-center">{dateInfo.day} {dateInfo.monthLabel.slice(0, 3)}</span>
             <button
               onClick={() => setSelectedDay(prev => Math.min(365, prev + 1))}
               disabled={selectedDay === 365}
@@ -1343,7 +1343,7 @@ const [showInstallHelp, setShowInstallHelp] = useState(false);
                   className="bg-stone-50 dark:bg-zinc-900 rounded-xl border border-[#E5E3DF]/60 p-3 space-y-3 overflow-hidden"
                 >
                   <div className="flex justify-between items-center">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-amber-850 dark:text-amber-300">Escolha o dia:</span>
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-amber-800 dark:text-amber-300">Escolha uma data:</span>
                     <button
                       onClick={() => setIsCalendarOpen(false)}
                       className="text-[10px] text-stone-500 hover:underline font-bold"
@@ -1352,24 +1352,63 @@ const [showInstallHelp, setShowInstallHelp] = useState(false);
                     </button>
                   </div>
 
-                  {/* Grid 365 index items */}
-                  <div className="grid grid-cols-6 sm:grid-cols-8 gap-1.5 max-h-[160px] overflow-y-auto bg-white dark:bg-zinc-950 border p-2 rounded-lg scrollbar-thin select-none">
-                    {Array.from({ length: 365 }, (_, idx) => {
-                      const day = idx + 1;
-                      const isDayRead = userSettings.readDays.includes(day);
-                      const isDayStarred = userSettings.starredDays.includes(day);
-                      const isCurrent = day === selectedDay;
+                  {/* Legenda */}
+                  <div className="flex items-center gap-3 text-[9px] text-stone-500">
+                    <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded bg-amber-200 ring-1 ring-amber-500 inline-block" />Selecionado</span>
+                    <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded bg-amber-100 dark:bg-amber-900 inline-block" />Hoje</span>
+                    <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded bg-emerald-100 inline-block" />Lido</span>
+                  </div>
+
+                  {/* Calendário agrupado por mês */}
+                  <div className="space-y-3 max-h-[260px] overflow-y-auto pr-0.5 select-none">
+                    {Array.from({ length: 12 }, (_, monthIdx) => {
+                      const year = new Date().getFullYear();
+                      const daysInMonth: { dayOfYear: number; dayNum: number }[] = [];
+                      const cursor = new Date(year, monthIdx, 1);
+                      while (cursor.getMonth() === monthIdx) {
+                        const dayOfYear = getDayOfYear(new Date(cursor));
+                        if (dayOfYear <= 365) {
+                          daysInMonth.push({ dayOfYear, dayNum: cursor.getDate() });
+                        }
+                        cursor.setDate(cursor.getDate() + 1);
+                      }
+                      const monthName = new Date(year, monthIdx, 1)
+                        .toLocaleDateString('pt-BR', { month: 'long' });
 
                       return (
-                        <button
-                          key={day}
-                          onClick={() => setSelectedDay(day)}
-                          title={`Ir para o Dia ${day}`}
-                          className={`text-xs py-1 px-0.5 rounded font-bold transition-all ${isCurrent ? 'ring-2 ring-amber-500 scale-105 bg-amber-200 text-amber-950' : isDayRead ? 'bg-emerald-100 text-emerald-950' : 'bg-stone-50 dark:bg-zinc-800 text-stone-600 dark:text-stone-400 border border-stone-200/40'}`}
-                        >
-                          {day}
-                          {isDayStarred && <span className="text-[7px] text-amber-500 ml-0.5">★</span>}
-                        </button>
+                        <div key={monthIdx}>
+                          <div className="text-[9px] font-black uppercase tracking-widest text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-zinc-900 px-2 py-1 rounded mb-1 sticky top-0 z-10">
+                            {monthName}
+                          </div>
+                          <div className="grid grid-cols-7 gap-1">
+                            {daysInMonth.map(({ dayOfYear, dayNum }) => {
+                              const isDayRead = userSettings.readDays.includes(dayOfYear);
+                              const isDayStarred = userSettings.starredDays.includes(dayOfYear);
+                              const isCurrent = dayOfYear === selectedDay;
+                              const isToday = dayOfYear === currentDayNum;
+
+                              return (
+                                <button
+                                  key={dayOfYear}
+                                  onClick={() => setSelectedDay(dayOfYear)}
+                                  title={`${dayNum} de ${monthName}`}
+                                  className={`text-xs py-1.5 rounded font-bold transition-all leading-none ${
+                                    isCurrent
+                                      ? 'ring-2 ring-amber-500 bg-amber-200 text-amber-950 scale-105'
+                                      : isToday
+                                      ? 'bg-amber-100 dark:bg-amber-900/60 text-amber-800 dark:text-amber-200 font-black'
+                                      : isDayRead
+                                      ? 'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-950 dark:text-emerald-200'
+                                      : 'bg-stone-50 dark:bg-zinc-800 text-stone-600 dark:text-stone-400 border border-stone-200/40'
+                                  }`}
+                                >
+                                  {dayNum}
+                                  {isDayStarred && <span className="text-[6px] text-amber-500 block leading-none">★</span>}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
                       );
                     })}
                   </div>
