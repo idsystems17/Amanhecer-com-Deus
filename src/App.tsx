@@ -53,15 +53,6 @@ import {
   OperationType 
 } from './firebase';
 
-// Voice profiles for narration
-const VOICE_PROFILES = [
-  { id: 'Kore', name: 'Kore', label: 'Voz Feminina Calma (Sugerida)', gender: 'Feminina', style: 'Acolhedora' },
-  { id: 'Fenrir', name: 'Fenrir', label: 'Voz Masculina Profunda', gender: 'Masculina', style: 'Serena' },
-  { id: 'Zephyr', name: 'Zephyr', label: 'Voz Neutra Suave', gender: 'Neutra', style: 'Leve' },
-  { id: 'Puck', name: 'Puck', label: 'Voz Alegre', gender: 'Feminina', style: 'Expressiva' },
-  { id: 'Charon', name: 'Charon', label: 'Voz Tradicional de Leitura', gender: 'Masculina', style: 'Solene' }
-];
-
 // Portuguese spoken numbers helper
 function parsePortugueseNumber(text: string): number | null {
   const normalized = text.toLowerCase().trim();
@@ -107,11 +98,7 @@ export default function App() {
   // States configuration
   const [selectedDay, setSelectedDay] = useState<number>(currentDayNum);
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
-  const [isLoadingAudio, setIsLoadingAudio] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [activeVoice, setActiveVoice] = useState('Kore');
-  const [useOfflineAudio, setUseOfflineAudio] = useState(false);
-  const [audioError, setAudioError] = useState<string | null>(null);
   const [showSettingsDrawer, setShowSettingsDrawer] = useState(false);
   const [simulatedNotificationSent, setSimulatedNotificationSent] = useState(false);
 const [showInstallHelp, setShowInstallHelp] = useState(false);
@@ -180,8 +167,6 @@ const [showInstallHelp, setShowInstallHelp] = useState(false);
   });
 
   // Audio References
-  const audioContextRef = useRef<AudioContext | null>(null);
-  const audioSourceRef = useRef<AudioBufferSourceNode | null>(null);
   const speechUtteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
   const recognitionRef = useRef<any>(null);
 
@@ -435,134 +420,38 @@ const [showInstallHelp, setShowInstallHelp] = useState(false);
   /**
    * Action: triggers Audio Narration using Gemini TTS server proxy or local client-side synthesis.
    */
-  const handlePlayNarration = async () => {
+  const stopNarration = () => {
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.cancel();
+      // Workaround para Chrome: cancel() pode não parar imediatamente
+      setTimeout(() => window.speechSynthesis.cancel(), 100);
+    }
+    speechUtteranceRef.current = null;
+    setIsPlaying(false);
+  };
+
+  const handlePlayNarration = () => {
     if (isPlaying) {
       stopNarration();
       return;
     }
+    if (!('speechSynthesis' in window)) return;
 
-    setAudioError(null);
-    const textToSpeak = `Hoje é dia de amanhecer com Deus. Título da mensagem: ${activeDevotional.title}. Versículo bíblico em ${activeDevotional.verseReference}: ${activeDevotional.verseText}. Reflexão de hoje: ${activeDevotional.reflection}. Ação prática recomendada: ${activeDevotional.action}. Oração sugerida: ${activeDevotional.prayer}`;
+    stopNarration();
 
-    if (useOfflineAudio) {
-      playSpeechSynthesis(textToSpeak);
-      return;
-    }
+    const textToSpeak = `Amanhecer com Deus. ${activeDevotional.title}. Versículo: ${activeDevotional.verseText}, ${activeDevotional.verseReference}. Reflexão: ${activeDevotional.reflection}. Atitude prática: ${activeDevotional.action}. Oração: ${activeDevotional.prayer}`;
 
-    setIsLoadingAudio(true);
-    try {
-      const response = await fetch('/api/tts', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          text: textToSpeak,
-          voice: activeVoice
-        })
-      });
-
-      if (!response.ok) {
-        throw new Error('Falha no áudio da Inteligência Artificial. Tentando gerador local offline...');
-      }
-
-      const data = await response.json();
-      if (data.error || !data.audio) {
-        throw new Error(data.error || 'Nenhum arquivo de áudio gerado.');
-      }
-
-      decodeAndPlayPCM(data.audio);
-    } catch (e: any) {
-      console.warn('Gemini TTS failed. Falling back to speechSynthesis gracefully:', e);
-      setAudioError('Usando voz de leitura offline do sistema.');
-      playSpeechSynthesis(textToSpeak);
-    } finally {
-      setIsLoadingAudio(false);
-    }
-  };
-
-  // Plays raw 16-bit PCM little-endian audio returned by raw Gemini TTS (24000Hz)
-  const decodeAndPlayPCM = (base64Audio: string) => {
-    try {
-      const binaryString = window.atob(base64Audio);
-      const bytes = new Uint8Array(binaryString.length);
-      for (let i = 0; i < binaryString.length; i++) {
-        bytes[i] = binaryString.charCodeAt(i);
-      }
-      
-      const buffer = bytes.buffer;
-      const int16Array = new Int16Array(buffer);
-      
-      const AudioCtxClass = window.AudioContext || (window as any).webkitAudioContext;
-      if (!audioContextRef.current) {
-        audioContextRef.current = new AudioCtxClass();
-      } else if (audioContextRef.current.state === 'suspended') {
-        audioContextRef.current.resume();
-      }
-
-      const audioCtx = audioContextRef.current;
-      // Gemini TTS sample rate is 24000
-      const sampleRate = 24000;
-      const audioBuffer = audioCtx.createBuffer(1, int16Array.length, sampleRate);
-      const channelData = audioBuffer.getChannelData(0);
-
-      // Normalise 16bit integers into -1.0 to 1.0 float PCM buffer keys
-      for (let i = 0; i < int16Array.length; i++) {
-        channelData[i] = int16Array[i] / 32768.0;
-      }
-
-      if (audioSourceRef.current) {
-        try { audioSourceRef.current.stop(); } catch {}
-        audioSourceRef.current.disconnect();
-      }
-
-      const source = audioCtx.createBufferSource();
-      source.buffer = audioBuffer;
-      source.playbackRate.value = accessibility.audioSpeed;
-      source.connect(audioCtx.destination);
-      source.start(0);
-
-      audioSourceRef.current = source;
-      setIsPlaying(true);
-
-      source.onended = () => {
-        setIsPlaying(false);
-      };
-    } catch (err: any) {
-      console.error('PCM decoding crash:', err);
-      setAudioError('Usando áudio alternativo do sistema.');
-      const textToSpeak = `Título: ${activeDevotional.title}. Reflexão: ${activeDevotional.reflection}`;
-      playSpeechSynthesis(textToSpeak);
-    }
-  };
-
-  // Web Speech API standard client-side synthesis
-  const playSpeechSynthesis = (text: string) => {
-    if (!('speechSynthesis' in window)) {
-      setAudioError('Aparelho incompatível com leitura de voz automática.');
-      return;
-    }
-
-    window.speechSynthesis.cancel();
-    
-    const utterance = new SpeechSynthesisUtterance(text);
+    const utterance = new SpeechSynthesisUtterance(textToSpeak);
     utterance.lang = 'pt-BR';
     utterance.rate = accessibility.audioSpeed;
-
-    utterance.onstart = () => {
-      setIsPlaying(true);
-    };
-    utterance.onend = () => {
-      setIsPlaying(false);
-    };
-    utterance.onerror = (e) => {
-      console.error('Speech synthesis error:', e);
-      setIsPlaying(false);
-    };
+    utterance.onstart = () => setIsPlaying(true);
+    utterance.onend = () => setIsPlaying(false);
+    utterance.onerror = () => setIsPlaying(false);
 
     speechUtteranceRef.current = utterance;
     window.speechSynthesis.speak(utterance);
   };
 
-  // Quick speak helper specifically for elderly confirmations
   const speakFeedback = (message: string) => {
     if ('speechSynthesis' in window) {
       window.speechSynthesis.cancel();
@@ -571,18 +460,6 @@ const [showInstallHelp, setShowInstallHelp] = useState(false);
       utterance.rate = 1.0;
       window.speechSynthesis.speak(utterance);
     }
-  };
-
-  const stopNarration = () => {
-    if (audioSourceRef.current) {
-      try { audioSourceRef.current.stop(); } catch {}
-      audioSourceRef.current.disconnect();
-      audioSourceRef.current = null;
-    }
-    if ('speechSynthesis' in window) {
-      window.speechSynthesis.cancel();
-    }
-    setIsPlaying(false);
   };
 
   /**
@@ -941,14 +818,6 @@ const [showInstallHelp, setShowInstallHelp] = useState(false);
             </button>
 
             <button
-              onClick={() => handleToggleStar(selectedDay)}
-              className="w-10 h-10 sm:w-11 sm:h-11 flex items-center justify-center bg-white dark:bg-zinc-850 hover:bg-amber-50 rounded-xl border transition shrink-0"
-              title="Favoritar"
-            >
-              <Star className={`w-4 h-4 ${isStarred ? 'text-amber-550 fill-amber-550' : 'text-stone-400'}`} />
-            </button>
-
-            <button
               onClick={() => setShowSettingsDrawer(true)}
               className="w-10 h-10 sm:w-11 sm:h-11 flex items-center justify-center bg-[#4e3629] text-white hover:bg-stone-850 rounded-xl transition shrink-0"
               title="Ajustes de Letra e Voz (Engrenagem)"
@@ -1197,26 +1066,24 @@ const [showInstallHelp, setShowInstallHelp] = useState(false);
           <button 
             id="play_audio_narrate"
             onClick={handlePlayNarration}
-            disabled={isLoadingAudio}
+            disabled={isLoadingFirebase}
             className="w-full h-20 px-6 bg-[#B45309] hover:bg-amber-700 text-white rounded-3xl flex items-center justify-center gap-4 shadow-lg active:scale-95 transition-all text-left"
             title="Narrar devocional por voz"
           >
             <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center shrink-0">
-              {isLoadingAudio ? (
-                <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin" />
-              ) : isPlaying ? (
+              {isPlaying ? (
                 <VolumeX className="w-6 h-6 text-white stroke-[2.5px]" />
               ) : (
                 <Volume2 className="w-6 h-6 text-white stroke-[2.5px]" />
               )}
             </div>
-            
+
             <div className="text-left select-none flex-1">
               <p className="text-2xl font-black tracking-tight leading-none mb-1">
                 {isPlaying ? 'Parar' : 'Ouvir'}
               </p>
               <p className="text-xs opacity-85 leading-snug">
-                {isLoadingAudio ? 'Carregando o áudio...' : isPlaying ? 'Toque para silenciar' : 'Escutar de forma simples'}
+                {isPlaying ? 'Toque para silenciar' : 'Escutar de forma simples'}
               </p>
             </div>
           </button>
@@ -1417,44 +1284,6 @@ const [showInstallHelp, setShowInstallHelp] = useState(false);
             </AnimatePresence>
           </div>
 
-          {/* BENTO BLOCK B: REMINDERS & ALARMS CONFIGURATION */}
-          <div className="bg-white dark:bg-zinc-910 p-6 rounded-2xl border border-stone-200/60 dark:border-zinc-800 space-y-4">
-            <div className="flex items-center justify-between">
-              <h4 className="text-sm font-bold uppercase tracking-widest text-stone-500 font-sans flex items-center gap-1.5">
-                <Bell className="w-4 h-4 text-amber-700 animate-swing" />
-                Despertar Diário
-              </h4>
-              
-              <button
-                onClick={() => {
-                  setUserSettings(prev => ({
-                    ...prev,
-                    notificationsEnabled: !prev.notificationsEnabled
-                  }));
-                }}
-                className={`relative w-12 h-6 rounded-full transition-colors duration-200 ${userSettings.notificationsEnabled ? 'bg-amber-600' : 'bg-stone-300'}`}
-                title="Ativar Lembrete"
-              >
-                <div className={`w-4 h-4 bg-white rounded-full absolute top-1 transition-transform duration-200 ${userSettings.notificationsEnabled ? 'translate-x-7' : 'translate-x-1'}`} />
-              </button>
-            </div>
-
-            <p className="text-xs text-stone-400 leading-relaxed">
-              Toque em "Testar Alarme" para ouvir o toque de despertar e ativar a notificação do celular.
-            </p>
-
-            <button
-              onClick={() => {
-                // Instantly turn on notifications if they are closed to avoid confusing user
-                setUserSettings(prev => ({ ...prev, notificationsEnabled: true }));
-                handleTestNotification();
-              }}
-              className="w-full h-11 bg-[#B45309] hover:bg-amber-700 text-white rounded-xl text-xs font-black uppercase tracking-wider transition active:scale-95"
-            >
-              Testar Alarme do Amanhecer
-            </button>
-          </div>
-
         </div>
 
         {/* PHONE INSTALL DEVICE SUPPORT (ADDITIONAL SCREEN LINK) */}
@@ -1595,55 +1424,7 @@ const [showInstallHelp, setShowInstallHelp] = useState(false);
                   </div>
                 </div>
 
-                {/* 4. Switch between server-side AI voice vs local speechSynthesis system voice */}
-                <div>
-                  <h4 className="font-bold text-stone-850 dark:text-stone-300 text-sm mb-3 border-l-2 border-amber-500 pl-2 uppercase tracking-wide font-mono">
-                    Voz de Leitura (Internet)
-                  </h4>
-                  <div className="flex items-center justify-between gap-2 p-3 bg-stone-50 dark:bg-zinc-800 rounded-2xl border">
-                    <div>
-                      <span className="text-sm font-bold block">Forçar Voz do Sistema</span>
-                      <span className="text-[10px] text-stone-500 leading-snug block font-mono">Ideal para leitura rápida offline</span>
-                    </div>
-                    <button
-                      onClick={() => setUseOfflineAudio(u => !u)}
-                      className={`p-1 rounded-full transition w-14 h-8 shrink-0 ${useOfflineAudio ? 'bg-amber-600' : 'bg-stone-300'}`}
-                    >
-                      <div className={`w-6 h-6 bg-white rounded-full shadow-md transition-all duration-200 ${useOfflineAudio ? 'translate-x-6' : 'translate-x-0'}`} />
-                    </button>
-                  </div>
-                </div>
-
-                {/* 5. Select speaker Voice Profiles (for server AI voice) */}
-                {!useOfflineAudio && (
-                  <div>
-                    <h4 className="font-bold text-stone-850 dark:text-stone-300 text-sm mb-3 border-l-2 border-amber-500 pl-2 uppercase tracking-wide font-mono flex items-center gap-1.5">
-                      Voz da Inteligência Artificial
-                    </h4>
-                    <div className="space-y-1 bg-stone-50 dark:bg-zinc-800 p-2.5 rounded-2xl border">
-                      {VOICE_PROFILES.map((profile) => (
-                        <button
-                          key={profile.id}
-                          onClick={() => {
-                            setActiveVoice(profile.id);
-                            stopNarration();
-                          }}
-                          className={`w-full text-left p-2.5 rounded-lg text-sm flex items-center justify-between transition ${activeVoice === profile.id ? 'bg-amber-100 text-amber-950 font-bold' : 'text-stone-700 dark:text-stone-300 hover:bg-stone-100 dark:hover:bg-zinc-700'}`}
-                        >
-                          <div>
-                            <p className="font-bold text-xs">{profile.label}</p>
-                            <p className="text-[9px] opacity-70">Perfil: {profile.gender} — {profile.style}</p>
-                          </div>
-                          {activeVoice === profile.id && (
-                            <Check className="w-4 h-4 text-amber-700 font-extrabold" />
-                          )}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* 6. Audio playback speed config for elderly */}
+                {/* 4. Audio playback speed config for elderly */}
                 <div>
                   <h4 className="font-bold text-stone-850 dark:text-stone-300 text-sm mb-3 border-l-2 border-amber-500 pl-2 uppercase tracking-wide font-mono">
                     Velocidade da Voz
