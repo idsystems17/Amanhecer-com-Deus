@@ -62,88 +62,6 @@ const VOICE_PROFILES = [
   { id: 'Charon', name: 'Charon', label: 'Voz Tradicional de Leitura', gender: 'Masculina', style: 'Solene' }
 ];
 
-// Beautiful inline logo representing "SIB Jardim Tropical" (Segunda Igreja Batista no Jardim Tropical)
-const SibJardimTropicalLogo = ({ className = "w-20 h-20" }: { className?: string }) => (
-  <div className={`${className} shrink-0 select-none flex items-center justify-center relative bg-white dark:bg-stone-900 rounded-full p-1 shadow-sm border border-stone-200/50`}>
-    <svg viewBox="0 0 120 120" className="w-full h-full" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <defs>
-        {/* Soft, shimmering gold/rose gold gradient for the sacred cross & concentric frames */}
-        <linearGradient id="logoGold" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stopColor="#dfbca0" />
-          <stop offset="35%" stopColor="#c5916c" />
-          <stop offset="70%" stopColor="#e3c7ad" />
-          <stop offset="100%" stopColor="#a36643" />
-        </linearGradient>
-
-        {/* Deep luxurious burgundy wine gradient for floral blossoms */}
-        <linearGradient id="logoBurgundy" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#6b0e1e" />
-          <stop offset="50%" stopColor="#550814" />
-          <stop offset="100%" stopColor="#3d030c" />
-        </linearGradient>
-      </defs>
-
-      {/* Elegant, delicate thin double concentric borders with dashed segments */}
-      <circle cx="60" cy="60" r="54" stroke="url(#logoGold)" strokeWidth="0.8" opacity="0.65" />
-      <circle cx="60" cy="60" r="50" stroke="url(#logoGold)" strokeWidth="1.2" strokeDasharray="90 8 20 6 45 10" />
-      <circle cx="60" cy="48" r="4" stroke="url(#logoGold)" strokeWidth="0.6" opacity="0.30" />
-
-      {/* BEAUTIFULLY CENTERED CHRISTIAN CROSS */}
-      <g>
-        {/* Subtle drop shadow layer for elegant depth */}
-        <rect x="58.5" y="30.5" width="6" height="58" rx="1.5" fill="#301015" opacity="0.12" />
-        <rect x="39.5" y="45.5" width="44" height="6" rx="1.5" fill="#301015" opacity="0.12" />
-
-        {/* Outer/Backing of Golden Cross */}
-        <rect x="57.5" y="29" width="5" height="56" rx="1" fill="url(#logoGold)" />
-        <rect x="38" y="44" width="44" height="5" rx="1" fill="url(#logoGold)" />
-
-        {/* Gilded Inner Highlights */}
-        <line x1="60" y1="30.5" x2="60" y2="83.5" stroke="#fffcf9" strokeWidth="0.7" opacity="0.8" />
-        <line x1="39.5" y1="46.5" x2="80.5" y2="46.5" stroke="#fffcf9" strokeWidth="0.7" opacity="0.8" />
-      </g>
-
-      {/* SYMMETRICAL BOTANICAL BRANCHES & LEAVES */}
-      {/* Left side branch flourishing up */}
-      <path d="M60,86 C42,86 32,71 35,55" stroke="url(#logoGold)" strokeWidth="0.85" strokeLinecap="round" />
-      {/* Right side branch flourishing up */}
-      <path d="M60,86 C78,86 88,71 85,55" stroke="url(#logoGold)" strokeWidth="0.85" strokeLinecap="round" />
-      
-      {/* Elegant leaves along the branches */}
-      <path d="M36,66 C32,64 33,59 38,61 C37,65 36,66 36,66 Z" fill="url(#logoGold)" opacity="0.65" />
-      <path d="M42,75 C38,74 38,69 43,70 C43,73 42,75 42,75 Z" fill="url(#logoGold)" opacity="0.65" />
-      <path d="M84,66 C88,64 87,59 82,61 C83,65 84,66 84,66 Z" fill="url(#logoGold)" opacity="0.65" />
-      <path d="M78,75 C82,74 82,69 77,70 C77,73 78,75 78,75 Z" fill="url(#logoGold)" opacity="0.65" />
-
-      {/* BURGUNDY FLORAL ACCENTS */}
-      {/* Blossom at the food of the Cross */}
-      <g transform="translate(60, 86)">
-        <path d="M0,3 C-2,-0.5 -4.5,0 -3.5,3 C-4.5,5.5 -2,7.5 0,5 C2,7.5 4.5,5.5 3.5,3 C4.5,0 2,-0.5 0,3 Z" fill="url(#logoBurgundy)" />
-        <circle cx="0" cy="3.5" r="1.1" fill="#fff5dd" />
-      </g>
-
-      {/* Blossom on the Left Branch */}
-      <g transform="translate(34, 58)">
-        <path d="M0,2.5 C-1.5,-0.5 -3.5,0 -2.5,2.5 C-3.5,4.5 -1.5,6 0,4 C1.5,6 3.5,4.5 2.5,2.5 C3.5,0 1.5,-0.5 0,2.5 Z" fill="url(#logoBurgundy)" transform="scale(0.85)" />
-        <circle cx="0" cy="2.5" r="0.9" fill="#ffebd0" />
-      </g>
-
-      {/* Blossom on the Right Branch */}
-      <g transform="translate(86, 58)">
-        <path d="M0,2.5 C-1.5,-0.5 -3.5,0 -2.5,2.5 C-3.5,4.5 -1.5,6 0,4 C1.5,6 3.5,4.5 2.5,2.5 C3.5,0 1.5,-0.5 0,2.5 Z" fill="url(#logoBurgundy)" transform="scale(0.85)" />
-        <circle cx="0" cy="2.5" r="0.9" fill="#ffebd0" />
-      </g>
-
-      {/* Tiny flower buds precisely placed */}
-      <circle cx="48" cy="81" r="1.4" fill="url(#logoBurgundy)" />
-      <circle cx="72" cy="81" r="1.4" fill="url(#logoBurgundy)" />
-      <circle cx="31" cy="46" r="1.5" fill="url(#logoBurgundy)" />
-      <circle cx="89" cy="46" r="1.5" fill="url(#logoBurgundy)" />
-      <circle cx="60" cy="21" r="1.6" fill="url(#logoBurgundy)" />
-    </svg>
-  </div>
-);
-
 // Portuguese spoken numbers helper
 function parsePortugueseNumber(text: string): number | null {
   const normalized = text.toLowerCase().trim();
@@ -196,10 +114,7 @@ export default function App() {
   const [audioError, setAudioError] = useState<string | null>(null);
   const [showSettingsDrawer, setShowSettingsDrawer] = useState(false);
   const [simulatedNotificationSent, setSimulatedNotificationSent] = useState(false);
-  const [simulatedWidgetInstalled, setSimulatedWidgetInstalled] = useState(false);
-  const [showInstallHelp, setShowInstallHelp] = useState(false);
-  const [savedTimeMessage, setSavedTimeMessage] = useState('');
-
+const [showInstallHelp, setShowInstallHelp] = useState(false);
   // Speech Recognition (Voice Search) State
   const [isListeningVoice, setIsListeningVoice] = useState(false);
   const [voiceFeedback, setVoiceFeedback] = useState<string | null>(null);
@@ -337,6 +252,15 @@ export default function App() {
     localStorage.setItem('devocional_accessibility', JSON.stringify(accessibility));
   }, [accessibility]);
 
+  // Aplica/remove classe 'dark' no <html> conforme o modo de contraste escolhido
+  useEffect(() => {
+    document.documentElement.classList.toggle('dark', accessibility.contrast === 'high-contrast-dark');
+  }, [accessibility.contrast]);
+
+  // Aplica/remove classe no <html> para alternar fonte global
+  useEffect(() => {
+    document.documentElement.classList.toggle('font-sans-override', accessibility.fontFamily === 'sans');
+  }, [accessibility.fontFamily]);
   useEffect(() => {
     localStorage.setItem('devocional_user_settings', JSON.stringify(userSettings));
   }, [userSettings]);
@@ -1477,84 +1401,8 @@ export default function App() {
             </div>
 
             <p className="text-xs text-stone-400 leading-relaxed">
-              Receba um convite amigável no celular para iniciar o seu amanhecer em oração e leitura com Deus.
+              Toque em "Testar Alarme" para ouvir o toque de despertar e ativar a notificação do celular.
             </p>
-
-            <div className="bg-stone-50 dark:bg-zinc-900 p-3.5 rounded-xl border border-[#E5E3DF]/50 space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-bold font-serif text-stone-600 dark:text-stone-300">Hora do Despertar:</span>
-                
-                {/* Two styled selectors for Hours and Minutes */}
-                <div className="flex items-center gap-1.5">
-                  <select
-                    value={userSettings.notificationTime.split(':')[0] || '07'}
-                    onChange={(e) => {
-                      const currentMin = userSettings.notificationTime.split(':')[1] || '00';
-                      const newHour = e.target.value;
-                      setUserSettings(prev => ({
-                        ...prev,
-                        notificationTime: `${newHour}:${currentMin}`
-                      }));
-                    }}
-                    className="bg-white dark:bg-zinc-800 border border-[#E5E3DF] dark:border-zinc-700 rounded-lg px-2 py-1 text-sm font-bold text-center text-[#1a1a1a] dark:text-stone-100 focus:ring-2 focus:ring-amber-500 min-h-[38px] cursor-pointer"
-                    title="Escolher Hora"
-                  >
-                    {Array.from({ length: 24 }, (_, i) => {
-                      const h = String(i).padStart(2, '0');
-                      return <option key={h} value={h} className="text-stone-850 dark:text-white dark:bg-zinc-800">{h} h</option>;
-                    })}
-                  </select>
-
-                  <span className="font-bold text-stone-400 font-serif">:</span>
-
-                  <select
-                    value={userSettings.notificationTime.split(':')[1] || '00'}
-                    onChange={(e) => {
-                      const currentHour = userSettings.notificationTime.split(':')[0] || '07';
-                      const newMin = e.target.value;
-                      setUserSettings(prev => ({
-                        ...prev,
-                        notificationTime: `${currentHour}:${newMin}`
-                      }));
-                    }}
-                    className="bg-white dark:bg-zinc-800 border border-[#E5E3DF] dark:border-zinc-700 rounded-lg px-2 py-1 text-sm font-bold text-center text-[#1a1a1a] dark:text-stone-100 focus:ring-2 focus:ring-amber-500 min-h-[38px] cursor-pointer"
-                    title="Escolher Minuto"
-                  >
-                    {Array.from({ length: 60 }, (_, i) => {
-                      const m = String(i).padStart(2, '0');
-                      return <option key={m} value={m} className="text-stone-850 dark:text-white dark:bg-zinc-800">{m} min</option>;
-                    })}
-                  </select>
-                </div>
-              </div>
-
-              {/* SALVAR HORÁRIO BUTTON - DIRECTLY REQUESTED BY USER FOR CLEAR CONFIRMATION */}
-              <button
-                onClick={() => {
-                  // Speak confirmation with voice feedback for senior accessibility
-                  speakFeedback(`Horário de oração salvo para às ${userSettings.notificationTime.replace(':', ' e ')}`);
-                  
-                  // Play gentle audio chime
-                  playAlarmeChime();
-                  
-                  // Show the brief success text banner
-                  setSavedTimeMessage(`Horário definido para às ${userSettings.notificationTime}!`);
-                  setTimeout(() => {
-                    setSavedTimeMessage('');
-                  }, 4000);
-                }}
-                className="w-full h-10 bg-amber-50 dark:bg-zinc-800 hover:bg-amber-100 dark:hover:bg-zinc-700 border border-amber-300 dark:border-zinc-700 text-[#4e3629] dark:text-amber-100 rounded-lg text-xs font-black uppercase tracking-wider transition flex items-center justify-center gap-1 active:scale-95"
-              >
-                <span>💾</span>
-                <span>Confirmar e Salvar Horário</span>
-              </button>
-
-              {savedTimeMessage && (
-                <div className="text-[11px] font-bold text-emerald-650 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/30 p-2 rounded-lg text-center animate-pulse">
-                  ✅ {savedTimeMessage}
-                </div>
-              )}
-            </div>
 
             <button
               onClick={() => {
@@ -1595,12 +1443,6 @@ export default function App() {
               <p>🤖 <strong>No Android (Chrome):</strong> Toque no menu de três pontos e selecione <strong>Adicionar à Tela Principal</strong> ou <strong>Instalar</strong>.</p>
             </div>
           )}
-        </div>
-
-        {/* ACCURATE OFFLINE FOOTER STATUS INDICATOR */}
-        <div className="w-full text-center py-4 border-t border-stone-200/60 dark:border-zinc-800 flex items-center justify-center gap-2 text-stone-400 select-none">
-          <div className="w-2.5 h-2.5 bg-emerald-500 rounded-full animate-pulse" />
-          <span className="text-[11px] font-bold uppercase tracking-widest font-mono">Modo de Leitura Offline Permanente Ativo</span>
         </div>
 
       </main>
