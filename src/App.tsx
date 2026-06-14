@@ -272,9 +272,27 @@ export default function App() {
 
   // Firebase auth listener
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setCurrentUser(user);
-      setIsAdmin(user ? isUserAdmin(user.email) : false);
+      if (!user) {
+        setIsAdmin(false);
+        return;
+      }
+      
+      const isBootstrapAdmin = isUserAdmin(user.email);
+      if (isBootstrapAdmin) {
+        setIsAdmin(true);
+        return;
+      }
+      
+      try {
+        const adminDocRef = doc(db, 'admins', user.uid);
+        const adminDocSnap = await getDoc(adminDocRef);
+        setIsAdmin(adminDocSnap.exists());
+      } catch (err) {
+        console.warn('Erro ao verificar permissões do Firestore:', err);
+        setIsAdmin(false);
+      }
     });
     return () => unsubscribe();
   }, []);
@@ -319,11 +337,6 @@ export default function App() {
     localStorage.setItem('devocional_accessibility', JSON.stringify(accessibility));
   }, [accessibility]);
 
-  // Aplica/remove classe 'dark' no <html> conforme o modo de contraste escolhido
-  useEffect(() => {
-    document.documentElement.classList.toggle('dark', accessibility.contrast === 'high-contrast-dark');
-  }, [accessibility.contrast]);
-
   useEffect(() => {
     localStorage.setItem('devocional_user_settings', JSON.stringify(userSettings));
   }, [userSettings]);
@@ -344,9 +357,22 @@ export default function App() {
     try {
       const user = await loginWithGoogle();
       if (user) {
-        const adminCheck = isUserAdmin(user.email);
+        let adminCheck = isUserAdmin(user.email);
+        
+        if (!adminCheck) {
+          try {
+            const adminDocRef = doc(db, 'admins', user.uid);
+            const adminDocSnap = await getDoc(adminDocRef);
+            adminCheck = adminDocSnap.exists();
+          } catch (err) {
+            console.error('Erro ao verificar admin na coleção:', err);
+          }
+        }
+        
+        setIsAdmin(adminCheck);
+        
         if (adminCheck) {
-          speakFeedback("Olá, Pastor! Acesso administrativo concedido.");
+          speakFeedback("Olá! Acesso administrativo concedido.");
           playAlarmeChime();
         } else {
           speakFeedback(`Olá ${user.displayName || 'Irmão'}! Você fez login com sucesso.`);
@@ -898,7 +924,7 @@ export default function App() {
           
           {/* Logo & Brand title row */}
           <div className="flex items-center gap-4 text-left self-auto select-none">
-            <img src="/logo-sib.png" alt="SIB" className="w-16 h-16 sm:w-20 sm:h-20 shrink-0 flex-none object-contain" />
+            <SibJardimTropicalLogo className="w-16 h-16 sm:w-20 sm:h-20 shrink-0 flex-none aspect-square" />
             <div>
               <h1 className="text-2xl sm:text-3xl lg:text-4xl font-serif font-black tracking-tight text-[#4e3629] dark:text-amber-100 leading-tight">
                 Amanhecer com Deus
@@ -1183,11 +1209,7 @@ export default function App() {
                 <BookOpen className="w-4 h-4 text-amber-600" />
                 <span>Tema diário: {activeDevotional.category}</span>
               </div>
-              {activeDevotional.lastEditedBy && (
-                <span className="text-[10px] font-mono non-italic text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-zinc-900 border px-2 py-0.5 rounded-full">
-                  Editado pelo Pastor
-                </span>
-              )}
+
             </div>
 
             {/* 1. SECTOR BIBLICAL VERSE COMPONENT */}
