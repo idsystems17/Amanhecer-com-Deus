@@ -851,7 +851,7 @@ const [showInstallHelp, setShowInstallHelp] = useState(false);
           
           {/* Logo & Brand title row */}
           <div className="flex items-center gap-4 text-left self-auto select-none">
-            <SibJardimTropicalLogo className="w-16 h-16 sm:w-20 sm:h-20 shrink-0 flex-none aspect-square" />
+            <img src="/logo-sib.png" alt="SIB" className="w-16 h-16 sm:w-20 sm:h-20 shrink-0 flex-none object-contain" />
             <div>
               <h1 className="text-2xl sm:text-3xl lg:text-4xl font-serif font-black tracking-tight text-[#4e3629] dark:text-amber-100 leading-tight">
                 Amanhecer com Deus
