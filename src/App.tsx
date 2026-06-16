@@ -34,15 +34,16 @@ import {
   Save,
   Trash2,
   User,
-  X
+  X,
+  Heart
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { getDevotionalForDay, getDayOfYear } from './data/devotionals';
-import { AccessibilitySettings, UserSettings, Devotional } from './types';
+import { AccessibilitySettings, UserSettings, Devotional, PrayerRequest } from './types';
 
 // Firebase Integrations
 import { onAuthStateChanged } from 'firebase/auth';
-import { doc, getDoc, setDoc, deleteDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, deleteDoc, addDoc, collection, getDocs, query, orderBy } from 'firebase/firestore';
 import { 
   db, 
   auth, 
@@ -125,6 +126,16 @@ const [showInstallHelp, setShowInstallHelp] = useState(false);
   const [editPrayer, setEditPrayer] = useState('');
   const [editCategory, setEditCategory] = useState('');
   const [isSaving, setIsSaving] = useState(false);
+
+  // Prayer request states
+  const [showPrayerForm, setShowPrayerForm] = useState(false);
+  const [prayerName, setPrayerName] = useState('');
+  const [prayerText, setPrayerText] = useState('');
+  const [isSendingPrayer, setIsSendingPrayer] = useState(false);
+  const [prayerSent, setPrayerSent] = useState(false);
+  const [prayerRequests, setPrayerRequests] = useState<PrayerRequest[]>([]);
+  const [showPrayerRequests, setShowPrayerRequests] = useState(false);
+  const [isLoadingPrayers, setIsLoadingPrayers] = useState(false);
 
   // Accessibility State Defaults (Optimized for seniors: Large, Serif, Standard Cappuccino Theme)
   const [accessibility, setAccessibility] = useState<AccessibilitySettings>(() => {
@@ -692,6 +703,47 @@ const [showInstallHelp, setShowInstallHelp] = useState(false);
     }
   };
 
+  const handleSendPrayerRequest = async () => {
+    if (!prayerText.trim()) return;
+    setIsSendingPrayer(true);
+    try {
+      await addDoc(collection(db, 'prayer_requests'), {
+        name: prayerName.trim() || 'Anônimo',
+        request: prayerText.trim(),
+        createdAt: new Date().toISOString(),
+      });
+      setPrayerSent(true);
+      setPrayerName('');
+      setPrayerText('');
+      setTimeout(() => {
+        setPrayerSent(false);
+        setShowPrayerForm(false);
+      }, 3000);
+    } catch (err) {
+      console.error(err);
+      alert('Erro ao enviar pedido. Tente novamente.');
+    } finally {
+      setIsSendingPrayer(false);
+    }
+  };
+
+  const handleLoadPrayerRequests = async () => {
+    if (!isAdmin) return;
+    setIsLoadingPrayers(true);
+    try {
+      const q = query(collection(db, 'prayer_requests'), orderBy('createdAt', 'desc'));
+      const snapshot = await getDocs(q);
+      const requests = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as PrayerRequest));
+      setPrayerRequests(requests);
+      setShowPrayerRequests(true);
+    } catch (err) {
+      console.error(err);
+      alert('Erro ao carregar pedidos de oração.');
+    } finally {
+      setIsLoadingPrayers(false);
+    }
+  };
+
   const handleShare = () => {
     if (navigator.share) {
       navigator.share({
@@ -1000,6 +1052,26 @@ const [showInstallHelp, setShowInstallHelp] = useState(false);
               </div>
             </div>
           </div>
+        ) : activeDevotional.isEmpty && !isLoadingFirebase ? (
+          <div className="bg-white dark:bg-[#151515] rounded-3xl border-2 border-dashed border-amber-200 dark:border-zinc-700 p-10 sm:p-14 shadow-sm mb-8 text-center space-y-4 select-none">
+            <div className="text-5xl">🌅</div>
+            <h2 className="text-2xl font-serif font-bold text-stone-400 dark:text-stone-500">
+              Devocional em preparo
+            </h2>
+            <p className="text-stone-400 dark:text-stone-500 font-serif italic text-base leading-relaxed">
+              O pastor ainda não preparou a mensagem para este dia.<br />
+              Volte mais tarde para receber a palavra de Deus.
+            </p>
+            {isAdmin && (
+              <button
+                onClick={handleStartEditing}
+                className="mt-2 px-6 py-3 bg-amber-600 hover:bg-amber-700 text-white rounded-xl font-bold text-sm transition inline-flex items-center gap-2"
+              >
+                <Edit2 className="w-4 h-4" />
+                Criar mensagem para este dia
+              </button>
+            )}
+          </div>
         ) : (
           <div className="bg-white dark:bg-[#151515] rounded-3xl border border-[#E5E3DF] dark:border-zinc-850 p-6 sm:p-10 shadow-sm transition-all duration-150 mb-8 space-y-8 select-text">
             
@@ -1157,6 +1229,67 @@ const [showInstallHelp, setShowInstallHelp] = useState(false);
             </button>
           </div>
 
+        </div>
+
+        {/* PRAYER REQUEST CARD */}
+        <div className="bg-white dark:bg-zinc-900 rounded-3xl border border-[#E5E3DF] dark:border-zinc-800 p-6 sm:p-8 shadow-sm mb-8 space-y-4">
+          <h3 className="text-sm font-sans font-black uppercase tracking-widest text-[#B45309] text-center">
+            🙏 Pedido de Oração
+          </h3>
+          <p className="text-center text-stone-500 dark:text-stone-400 text-sm font-serif italic">
+            Deixe seu pedido e o pastor irá orar por você.
+          </p>
+          <button
+            onClick={() => setShowPrayerForm(true)}
+            className="w-full h-16 px-6 bg-[#4e3629] hover:bg-stone-800 text-white rounded-2xl flex items-center justify-center gap-3 shadow-md transition-all"
+          >
+            <Heart className="w-6 h-6 text-amber-400" />
+            <span className="text-lg font-black">Enviar Pedido de Oração</span>
+          </button>
+
+          {isAdmin && (
+            <div className="space-y-3 border-t border-stone-100 dark:border-zinc-800 pt-4">
+              <button
+                onClick={showPrayerRequests ? () => setShowPrayerRequests(false) : handleLoadPrayerRequests}
+                disabled={isLoadingPrayers}
+                className="w-full py-2.5 px-4 bg-amber-50 dark:bg-amber-950/30 hover:bg-amber-100 border border-amber-200 dark:border-amber-800 rounded-xl text-xs font-black uppercase tracking-wide text-amber-800 dark:text-amber-300 flex items-center justify-center gap-2 transition disabled:opacity-40"
+              >
+                {isLoadingPrayers ? (
+                  <div className="w-3.5 h-3.5 border-2 border-amber-600 border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <Heart className="w-3.5 h-3.5" />
+                )}
+                {showPrayerRequests ? 'Ocultar Pedidos' : 'Ver Pedidos Recebidos'}
+              </button>
+
+              <AnimatePresence>
+                {showPrayerRequests && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    exit={{ opacity: 0, height: 0 }}
+                    className="space-y-3 overflow-hidden"
+                  >
+                    {prayerRequests.length === 0 ? (
+                      <p className="text-center text-stone-400 text-xs italic py-4">Nenhum pedido recebido ainda.</p>
+                    ) : (
+                      prayerRequests.map(req => (
+                        <div key={req.id} className="bg-stone-50 dark:bg-zinc-800 rounded-xl p-4 border border-stone-200 dark:border-zinc-700 space-y-1">
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs font-black text-amber-700 dark:text-amber-400">{req.name}</span>
+                            <span className="text-[10px] text-stone-400">
+                              {new Date(req.createdAt).toLocaleDateString('pt-BR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                            </span>
+                          </div>
+                          <p className="text-sm font-serif text-stone-700 dark:text-stone-200 leading-relaxed">{req.request}</p>
+                        </div>
+                      ))
+                    )}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+          )}
         </div>
 
         {/* SECONDARY BLOCKS (PROGRESS, CALENDAR, REMINDERS - LOWER PORTION BENTO GRIDS AS REQUESTED) */}
@@ -1320,6 +1453,85 @@ const [showInstallHelp, setShowInstallHelp] = useState(false);
         </div>
 
       </main>
+
+      {/* PRAYER REQUEST FORM MODAL */}
+      <AnimatePresence>
+        {showPrayerForm && (
+          <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 0.6 }}
+              exit={{ opacity: 0 }}
+              onClick={() => !isSendingPrayer && setShowPrayerForm(false)}
+              className="absolute inset-0 bg-black"
+            />
+            <motion.div
+              initial={{ opacity: 0, y: 40, scale: 0.97 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 40 }}
+              className="relative w-full max-w-md bg-white dark:bg-zinc-900 rounded-3xl p-6 shadow-2xl space-y-5 z-10"
+            >
+              <div className="flex items-center justify-between">
+                <h3 className="text-xl font-serif font-black text-[#4e3629] dark:text-amber-100 flex items-center gap-2">
+                  <Heart className="w-5 h-5 text-amber-600" />
+                  Pedido de Oração
+                </h3>
+                {!prayerSent && (
+                  <button onClick={() => setShowPrayerForm(false)} className="text-stone-400 hover:text-stone-600 p-1">
+                    <X className="w-5 h-5" />
+                  </button>
+                )}
+              </div>
+
+              {prayerSent ? (
+                <div className="text-center py-8 space-y-3">
+                  <div className="text-5xl">🙏</div>
+                  <p className="text-lg font-serif font-bold text-emerald-700 dark:text-emerald-400">Pedido enviado!</p>
+                  <p className="text-sm text-stone-500 dark:text-stone-400 font-serif italic">O pastor receberá seu pedido e orará por você.</p>
+                </div>
+              ) : (
+                <>
+                  <div className="space-y-1">
+                    <label className="block text-xs font-bold uppercase tracking-wider text-stone-500">Seu nome (opcional)</label>
+                    <input
+                      type="text"
+                      value={prayerName}
+                      onChange={e => setPrayerName(e.target.value)}
+                      placeholder="Pode deixar em branco se preferir"
+                      className="w-full p-3 border rounded-xl text-base bg-stone-50 dark:bg-zinc-800 border-[#E5E3DF] dark:border-zinc-700"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="block text-xs font-bold uppercase tracking-wider text-stone-500">Pedido de Oração *</label>
+                    <textarea
+                      rows={4}
+                      value={prayerText}
+                      onChange={e => setPrayerText(e.target.value)}
+                      placeholder="Escreva aqui o seu pedido..."
+                      className="w-full p-3 border rounded-xl text-base font-serif bg-stone-50 dark:bg-zinc-800 border-[#E5E3DF] dark:border-zinc-700 resize-none"
+                    />
+                  </div>
+                  <button
+                    onClick={handleSendPrayerRequest}
+                    disabled={!prayerText.trim() || isSendingPrayer}
+                    className="w-full h-14 bg-[#4e3629] hover:bg-stone-800 text-white rounded-2xl font-black text-base flex items-center justify-center gap-2 transition disabled:opacity-40"
+                  >
+                    {isSendingPrayer ? (
+                      <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    ) : (
+                      <>
+                        <Heart className="w-5 h-5 text-amber-400" />
+                        Enviar Pedido
+                      </>
+                    )}
+                  </button>
+                  <p className="text-[11px] text-stone-400 text-center">Seu pedido será visto apenas pelo pastor.</p>
+                </>
+              )}
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       {/* ACCESS DRAWER PANEL FOR GENERAL ACCESSIBILITY SETTINGS */}
       <AnimatePresence>

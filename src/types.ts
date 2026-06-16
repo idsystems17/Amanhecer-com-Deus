@@ -15,6 +15,14 @@ export interface Devotional {
   category: string;
   lastEditedBy?: string;
   lastEditedAt?: string;
+  isEmpty?: boolean;
+}
+
+export interface PrayerRequest {
+  id?: string;
+  name: string;
+  request: string;
+  createdAt: string;
 }
 
 export type FontSizeOption = 'normal' | 'large' | 'extra-large';
